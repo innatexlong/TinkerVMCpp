@@ -1,0 +1,9 @@
+; Quick test for v0.1.1
+; 1. Download vm.exe (see release page) and run it.
+; 2. In the vm.exe console, paste the entire block below.
+; 3. Press Enter.
+; You should see 4 printed, and the final Ret code: 4!
+new 1 4
+movc 2 1
+add 1 1 1
+retv 1 >
