@@ -57,8 +57,12 @@ namespace parser {
                     auto it_res = env.variables.find(var_id_res);
                     auto it_l = env.variables.find(var_id_l);
                     auto it_r = env.variables.find(var_id_r);
-                    if (it_res == env.variables.end() || it_l == env.variables.end() || it_r == env.variables.end())
-                        throw exceptions::SegFault("Variable not found");
+                    if (it_res == env.variables.end())
+                        throw exceptions::SegFault(std::format("Variable not found (res var {})", var_id_res));
+                    if (it_l == env.variables.end())
+                        throw exceptions::SegFault(std::format("Variable not found (left var {})", var_id_l));
+                    if (it_r == env.variables.end())
+                        throw exceptions::SegFault(std::format("Variable not found (right var {})", var_id_r));
 
                     const auto& var_res = it_res->second;
                     const auto& var_l = it_l->second;
@@ -163,10 +167,11 @@ namespace parser {
                 }
                 case Opcode::retv: {
                     // TODO
-                    std::vector<std::uint8_t> ret_var(sizeof(env::pos_t), 0);
                     env::pos_t var_id;
                     io_utils::read(is, reinterpret_cast<char*>(&var_id), sizeof(env::pos_t));
                     const auto& var = env.variables.find(var_id);
+                    std::vector<std::uint8_t> ret_var(sizeof(env::pos_t));
+                    std::memcpy(ret_var.data(), &var_id, sizeof(env::pos_t));
                     if (var == env.variables.end()) {
                         throw exceptions::VarNotFound(std::format("Var not found {}", var_id));
                     }
@@ -182,10 +187,25 @@ namespace parser {
                     break;
                 }
                 case Opcode::movc: {
-                    std::uint32_t val, dest_var;
+                    std::uint32_t val, dest_var_id;
                     io_utils::read(is, reinterpret_cast<char*>(&val), sizeof(val));
-                    io_utils::read(is, reinterpret_cast<char*>(&dest_var), sizeof(dest_var));
-                    // TODO: 实现 movc
+                    io_utils::read(is, reinterpret_cast<char*>(&dest_var_id), sizeof(dest_var_id));
+                    auto it = env.variables.find(dest_var_id);
+                    if (it == env.variables.end()) {
+                        throw exceptions::SegFault(std::format("Variable not found (dest {})", dest_var_id));
+                    }
+                    const auto& var = it->second;
+
+                    // 仅支持 UInt32 类型
+                    if (var.type != env::VarType::UInt32) {
+                        throw exceptions::InvalidVarType("movc only supports UInt32");
+                    }
+                    if (var.size < sizeof(val)) {
+                        throw exceptions::SizeMismatch("movc: variable size too small");
+                    }
+
+                    env.memory_pool.set<std::uint32_t>(var.ptr, val);
+                    break;
                     break;
                 }
                 default: throw exceptions::InvalidOperation("Unknown operation");
