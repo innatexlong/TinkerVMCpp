@@ -176,6 +176,7 @@ target_compile_definitions(vm PRIVATE FMT_HEADER_ONLY)
 
 # ---- 编译选项（严格模式，完全保留） ----
 target_compile_options(vm PRIVATE
+	-static-libgcc
     -std=c++26
     -O3
     -m64
